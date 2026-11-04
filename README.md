@@ -1,6 +1,6 @@
 # CSIS 4260 – Assignment 1: S&P 500 Storage, Analysis & Prediction Dashboard
 
-**Student:** Kanlayakorn (Kandy) Chanthanam · Douglas College · Fall 2026
+**Student:** Kandy Chanthanam · Douglas College · Fall 2026
 
 Dataset: daily prices for 505 S&P 500 companies, 2013-02-08 → 2018-02-07 (619,040 rows, ~29 MB CSV).
 
