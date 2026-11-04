@@ -1,0 +1,7 @@
+step,pandas,polars,speedup (pandas/polars)
+1 load csv,0.3887,0.1067,3.6437
+2 technical indicators,0.8353,0.1325,6.3041
+3 clean + 80/20 split,0.1779,0.0359,4.9563
+4 groupby analytics,0.0808,0.0272,2.9757
+5 per-ticker model matrices,0.5084,0.1951,2.6056
+TOTAL,1.9911,0.4974,4.0034

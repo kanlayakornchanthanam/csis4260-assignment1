@@ -1,0 +1,24 @@
+Benchmarking Pandas vs Polars ...
+library                      pandas  polars  speedup (pandas/polars)
+step                                                                
+1 load csv                   0.3887  0.1067                   3.6437
+2 technical indicators       0.8353  0.1325                   6.3041
+3 clean + 80/20 split        0.1779  0.0359                   4.9563
+4 groupby analytics          0.0808  0.0272                   2.9757
+5 per-ticker model matrices  0.5084  0.1951                   2.6056
+TOTAL                        1.9911  0.4974                   4.0034
+max |pandas - polars| for SMA_20: 0.00e+00
+max |pandas - polars| for EMA_20: 9.09e-13
+max |pandas - polars| for RSI_14: 4.26e-14
+max |pandas - polars| for MACD: 1.14e-12
+max |pandas - polars| for MACD_signal: 9.23e-13
+
+Training Linear Regression + Random Forest for 505 companies ...
+training time (s): {'linear': 0.8, 'rf': 139.2}
+
+Average test metrics across companies:
+                          rmse    mae   mape  direction_acc  train_seconds_all_505
+model                                                                            
+Linear Regression       1.375  0.941  0.976         48.534                    0.8
+Naive (today=tomorrow)  1.346  0.910  0.952          0.840                    NaN
+Random Forest           1.444  1.016  1.071         48.874                  139.2

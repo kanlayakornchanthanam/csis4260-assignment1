@@ -1,0 +1,27 @@
+
+=== scale 1x  (619,040 rows) ===
+{'scale': '1x', 'rows': 619040, 'format': 'csv', 'size_mb': 30.7, 'write_s': 0.35, 'read_full_s': 0.224, 'read_selective_s': 0.126, 'pandas_read_s': 0.322}
+{'scale': '1x', 'rows': 619040, 'format': 'csv_gzip', 'size_mb': 10.0, 'write_s': 6.066, 'read_full_s': 0.24, 'read_selective_s': 0.156, 'pandas_read_s': 0.433}
+{'scale': '1x', 'rows': 619040, 'format': 'parquet_none', 'size_mb': 13.1, 'write_s': 0.116, 'read_full_s': 0.029, 'read_selective_s': 0.013, 'pandas_read_s': 0.038}
+{'scale': '1x', 'rows': 619040, 'format': 'parquet_snappy', 'size_mb': 10.5, 'write_s': 0.131, 'read_full_s': 0.027, 'read_selective_s': 0.013, 'pandas_read_s': 0.035}
+{'scale': '1x', 'rows': 619040, 'format': 'parquet_gzip', 'size_mb': 8.7, 'write_s': 5.673, 'read_full_s': 0.05, 'read_selective_s': 0.02, 'pandas_read_s': 0.058}
+{'scale': '1x', 'rows': 619040, 'format': 'parquet_zstd', 'size_mb': 8.7, 'write_s': 0.144, 'read_full_s': 0.029, 'read_selective_s': 0.014, 'pandas_read_s': 0.039}
+
+=== scale 10x  (6,190,400 rows) ===
+{'scale': '10x', 'rows': 6190400, 'format': 'csv', 'size_mb': 318.3, 'write_s': 3.304, 'read_full_s': 2.319, 'read_selective_s': 1.209, 'pandas_read_s': 3.588}
+{'scale': '10x', 'rows': 6190400, 'format': 'csv_gzip', 'size_mb': 100.4, 'write_s': 59.586, 'read_full_s': 2.331, 'read_selective_s': 1.462, 'pandas_read_s': 4.43}
+{'scale': '10x', 'rows': 6190400, 'format': 'parquet_none', 'size_mb': 131.4, 'write_s': 1.256, 'read_full_s': 0.254, 'read_selective_s': 0.107, 'pandas_read_s': 0.282}
+{'scale': '10x', 'rows': 6190400, 'format': 'parquet_snappy', 'size_mb': 105.2, 'write_s': 1.408, 'read_full_s': 0.294, 'read_selective_s': 0.113, 'pandas_read_s': 0.293}
+{'scale': '10x', 'rows': 6190400, 'format': 'parquet_gzip', 'size_mb': 86.7, 'write_s': 57.781, 'read_full_s': 0.524, 'read_selective_s': 0.162, 'pandas_read_s': 0.604}
+{'scale': '10x', 'rows': 6190400, 'format': 'parquet_zstd', 'size_mb': 87.2, 'write_s': 1.667, 'read_full_s': 0.299, 'read_selective_s': 0.114, 'pandas_read_s': 0.325}
+
+=== scale 100x  (61,904,000 rows) ===
+{'scale': '100x', 'rows': 61904000, 'format': 'csv', 'size_mb': 3250.1, 'write_s': 33.771, 'read_full_s': 23.327, 'read_selective_s': 12.694, 'pandas_read_s': None}
+{'scale': '100x', 'rows': 61904000, 'format': 'csv_gzip', 'size_mb': 1005.2, 'write_s': 585.014, 'read_full_s': 23.275, 'read_selective_s': 14.391, 'pandas_read_s': None}
+{'scale': '100x', 'rows': 61904000, 'format': 'parquet_none', 'size_mb': 1313.8, 'write_s': 12.808, 'read_full_s': 2.655, 'read_selective_s': 0.922, 'pandas_read_s': None}
+{'scale': '100x', 'rows': 61904000, 'format': 'parquet_snappy', 'size_mb': 1051.7, 'write_s': 14.553, 'read_full_s': 2.735, 'read_selective_s': 0.977, 'pandas_read_s': None}
+{'scale': '100x', 'rows': 61904000, 'format': 'parquet_gzip', 'size_mb': 867.0, 'write_s': 566.155, 'read_full_s': 5.361, 'read_selective_s': 1.621, 'pandas_read_s': None}
+{'scale': '100x', 'rows': 61904000, 'format': 'parquet_zstd', 'size_mb': 872.4, 'write_s': 16.684, 'read_full_s': 3.549, 'read_selective_s': 1.224, 'pandas_read_s': None}
+
+Saved results/part1_storage_benchmark.csv
+EXIT 0

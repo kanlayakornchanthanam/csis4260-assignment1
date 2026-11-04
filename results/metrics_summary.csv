@@ -1,0 +1,4 @@
+model,rmse,mae,mape,direction_acc,train_seconds_all_505
+Linear Regression,1.375,0.941,0.976,48.534,0.8
+Naive (today=tomorrow),1.346,0.91,0.952,,
+Random Forest,1.444,1.016,1.071,48.874,139.2
