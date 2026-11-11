@@ -1,6 +1,6 @@
 # CSIS 4260 – Assignment 1: Stock Data Storage, Analysis and Prediction Dashboard
 
-**Name:** Kanlayakorn (Kandy) Chanthanam
+**Name:** Kandy Chanthanam
 **Course:** CSIS 4260 – Special Topics in Data Analytics, Douglas College, Fall 2026
 
 ## About this project
