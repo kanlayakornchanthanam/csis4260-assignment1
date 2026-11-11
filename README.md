@@ -123,7 +123,7 @@ My hypothesis was that Parquet would be smaller and faster at every size, and th
 
 - **Pandas** is the most common Python library for tables of data. It mostly uses one CPU core, and per-company calculations with `groupby().transform()` can be slow [5].
 - **Polars** is a newer library written in Rust. It uses all CPU cores and is built on Apache Arrow. Its `.over()` window functions can calculate per-company values in one step [6].
-- **Technical indicators** I added for each company:
+- **Technical indicators** are values calculated from past price and volume to help read trend and momentum [16]. I added 4 for each company (the assignment asks for at least 2):
   - **SMA 20** (Simple Moving Average): the average close of the last 20 days. It shows the trend [7].
   - **EMA 20** (Exponential Moving Average): like SMA, but recent days count more [7].
   - **RSI 14** (Relative Strength Index): measures momentum from 0 to 100. Above 70 can mean "overbought" and below 30 "oversold" [8].
@@ -255,6 +255,8 @@ I tested the dashboard by changing tickers, switching models, and trying every t
 [14] Plotly, "Basic Callbacks," Dash documentation. https://dash.plotly.com/basic-callbacks
 
 [15] Reflex, "Introduction," Reflex documentation. https://reflex.dev/docs/getting-started/introduction
+
+[16] Investopedia, "Technical Indicator: Definition, Analyst Uses, Types and Examples." https://www.investopedia.com/terms/t/technicalindicator.asp
 
 ## AI tools used
 

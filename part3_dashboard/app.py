@@ -73,7 +73,7 @@ header[data-testid="stHeader"] {{ background: transparent; }}
 .st-key-nav button[aria-checked="true"] {{
   background: #fff !important; box-shadow: 0 1px 3px rgba(23,23,28,.08) !important; }}
 .st-key-nav button[aria-checked="true"] p {{ font-weight: 500; }}
-.st-key-nav [role="radiogroup"] {{ justify-content: center; }}
+.st-key-nav [role="radiogroup"] {{ justify-content: flex-start; }}
 .st-key-tf [role="radiogroup"] {{ justify-content: flex-end; }}
 .st-key-tf [data-testid="stButtonGroup"] button {{ background: #EFEFF5 !important; padding: .2rem .7rem !important; }}
 .st-key-tf [data-testid="stButtonGroup"] button p {{ font-size: .78rem !important; color: {MUTED}; }}
@@ -195,9 +195,7 @@ def sparkline(y, color):
 
 
 # ---------------------------------------------------------------- top bar
-c1, c2, c3 = st.columns([1.2, 2.6, 1.2], vertical_alignment="center")
-with c1:
-    st.markdown("<div class='brand'><span class='ring'></span>Backtest</div>", unsafe_allow_html=True)
+c2, c3 = st.columns([3, 1.2], vertical_alignment="center")
 with c2:
     with st.container(key="nav"):
         view = st.segmented_control("View", ["Predictions", "All companies", "Speed tests"],
