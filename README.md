@@ -197,12 +197,13 @@ I chose **Streamlit** because it was the fastest to build, it has a built-in sea
 
 ### What the dashboard does
 
-- **Search box** in the sidebar to find any of the 505 companies
-- Main chart of **actual vs predicted** closing price for both models, with SMA/EMA lines
-- **RSI** and **MACD** charts below the main chart
-- **Metric cards** showing each model's error for the selected company
-- A **train/test line** on the chart showing where testing starts
-- Tabs for the **error chart**, a **ranking of all companies**, and the **Part 1 and Part 2 result tables**
+- **Search box** at the top right to find any of the 505 companies
+- **Candlestick chart** of the real price (mint = up day, yellow = down day) with the model's prediction drawn as a line
+- **Time range buttons** (1M, 3M, 6M, Test, All). "All" shades the test period so you can see where testing starts
+- **Model switch** (Linear / Random Forest) on the right panel that updates the chart and all numbers
+- **Model cards** showing the last prediction, the average daily error compared with the simple guess, and how often the model guessed up or down correctly
+- **Indicator cards** for RSI, MACD, SMA 20 and volume, each with a small trend line and a status label (for example "Oversold" or "Bearish")
+- Extra pages for **All companies** (ranking of all 505 companies) and **Speed tests** (Part 1 and Part 2 results with a bar chart)
 - A button to **download** the predictions as CSV
 
 ### My design choices
@@ -210,10 +211,11 @@ I chose **Streamlit** because it was the fastest to build, it has a built-in sea
 - I ran the models once in Part 2 and saved the predictions as a **Parquet** file. The dashboard just reads this file, so it opens quickly. This uses what I learned in Part 1.
 - I used `@st.cache_data` so the data loads only once, not every time the user clicks [13].
 - I showed the simple guess next to the models so users can see honestly how good the models are.
+- I used a light, clean style with rounded cards, the Geist font, and only a few colours (mint, yellow, violet and black) so the numbers are easy to read.
 
 ### Testing
 
-I tested the dashboard by changing tickers (for example AAPL to MSFT) and switching between "test period" and "full history." It worked with no errors.
+I tested the dashboard by changing tickers, switching models, and trying every time range and page. It worked with no errors.
 
 ### Future improvements
 

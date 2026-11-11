@@ -6,92 +6,161 @@ Run:  python -m streamlit run part3_dashboard/app.py
 """
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from plotly.subplots import make_subplots
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "results"
+DATA = ROOT / "data" / "all_stocks_5yr.csv"
 
 # ---------------------------------------------------------------- design tokens
-INK = "#16233B"        # deep navy - text and the real price
-MUTED = "#5B6B82"      # secondary text
-LINE = "#D5DCE6"       # hairlines
-PAPER = "#FFFFFF"      # panels
-LR = "#0F7C80"         # Linear Regression - teal
-RF = "#D98A1F"         # Random Forest - amber
-UP, DOWN = "#2F7D4F", "#B23A48"
-MODEL_COLORS = {"Linear Regression": LR, "Random Forest": RF}
+INK = "#17171C"
+MUTED = "#8A8C99"
+HAIR = "#ECECF3"
+MINT, MINT_SOFT = "#3FC8A0", "#E2F6EF"
+BUTTER = "#F6CF5B"
+CORAL, CORAL_SOFT = "#EB7A5A", "#FCEAE4"
+VIOLET = "#8C7CF0"
 MODEL_COLS = {"Linear Regression": "pred_linear", "Random Forest": "pred_rf"}
+MODEL_LINE = {"Linear Regression": INK, "Random Forest": VIOLET}
 NAIVE = "Naive (today=tomorrow)"
+FONT = "Geist, Inter, system-ui, sans-serif"
 
-st.set_page_config(page_title="Stock Prediction Back-test", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Stock Prediction Back-test", page_icon="📈", layout="wide",
+                   initial_sidebar_state="collapsed")
 
 st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-html, body, [class*="css"], .stMarkdown, .stText, label, p, li, input, button, textarea {{
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap');
+html, body, .stApp, .stMarkdown, p, label, input, button, li, td, th {{ font-family: {FONT}; }}
+.stApp {{
+  background:
+    radial-gradient(1200px 700px at 85% 10%, #F6EAF0 0%, rgba(246,234,240,0) 60%),
+    radial-gradient(900px 600px at 10% 90%, #E7ECF8 0%, rgba(231,236,248,0) 60%),
+    #ECECF6;
 }}
-.block-container {{ padding-top: 2.2rem; max-width: 1280px; }}
-[data-testid="stSidebar"] {{ background: {INK}; }}
-[data-testid="stSidebar"] * {{ color: #E8EDF5; }}
-[data-testid="stSidebar"] [data-baseweb="select"] div, [data-testid="stSidebar"] [data-baseweb="select"] input,
-[data-testid="stSidebar"] [data-baseweb="select"] span {{ color: {INK} !important; -webkit-text-fill-color: {INK}; }}
-[data-testid="stSidebar"] [data-testid="stSelectbox"] input,
-[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] *,
-[data-testid="stSidebar"] [data-testid="stMultiSelect"] [data-baseweb="select"] > div > div:first-child {{
-  color: {INK} !important; -webkit-text-fill-color: {INK} !important; opacity: 1 !important; }}
-[data-testid="stSidebar"] .side-note {{ color: #9FB0C8; font-size: .82rem; line-height: 1.45; }}
-[data-testid="stSidebar"] [data-baseweb="tag"] {{ background: #2A3A57 !important; }}
-[data-testid="stSidebar"] [data-baseweb="tag"] * {{ color: #E8EDF5 !important; }}
+header[data-testid="stHeader"] {{ background: transparent; }}
+[data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"] {{ display: none; }}
+.block-container, [data-testid="stMainBlockContainer"] {{ padding: 1.6rem 2rem 2rem; max-width: 1360px; }}
+[data-testid="stVerticalBlock"] {{ gap: .85rem; }}
 
-.hero {{ display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem;
-        border-bottom: 2px solid {INK}; padding-bottom: 1rem; margin-bottom: 1.1rem; flex-wrap: wrap; }}
-.ticker {{ font-family: 'Archivo', sans-serif; font-stretch: 75%; font-weight: 800; font-size: 6.2rem;
-          line-height: .82; letter-spacing: -.02em; color: {INK}; margin: 0; }}
-.hero-sub {{ color: {MUTED}; font-size: .95rem; margin-top: .55rem; }}
-.price {{ text-align: right; }}
-.price .v {{ font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 2.6rem; color: {INK};
-            font-variant-numeric: tabular-nums; line-height: 1; }}
-.price .d {{ font-size: .95rem; font-variant-numeric: tabular-nums; margin-top: .3rem; }}
-.price .l {{ color: {MUTED}; font-size: .82rem; margin-top: .15rem; }}
-
-.verdict {{ font-size: 1.12rem; line-height: 1.5; color: {INK}; max-width: 68ch; margin: 0 0 1.2rem 0; }}
-
-.board {{ width: 100%; border-collapse: collapse; background: {PAPER}; border: 1px solid {LINE};
-         font-variant-numeric: tabular-nums; margin-bottom: 1.4rem; }}
-.board th, .board td {{ border-left: none !important; border-right: none !important; }}
-.board th {{ text-align: left; font-weight: 500; color: {MUTED}; font-size: .82rem; padding: .6rem 1rem;
-            border-bottom: 1px solid {LINE}; }}
-.board th.num, .board td.num {{ text-align: right; }}
-.board td {{ padding: .75rem 1rem; border-bottom: 1px solid {LINE}; font-size: 1rem; color: {INK}; }}
-.board tr:last-child td {{ border-bottom: none; }}
-.board tr.best td {{ background: #EEF6F5; }}
-.swatch {{ display: inline-block; width: 18px; height: 3px; vertical-align: middle; margin-right: .6rem; }}
-.badge {{ font-size: .75rem; color: {LR}; border: 1px solid {LR}; padding: .05rem .45rem; margin-left: .6rem;
-         border-radius: 2px; }}
-
-h3 {{ font-family: 'Archivo', sans-serif !important; font-weight: 700 !important; color: {INK} !important; }}
-.stTabs [data-baseweb="tab"] {{ font-weight: 500; }}
-:focus-visible {{ outline: 2px solid {LR} !important; outline-offset: 2px; }}
-@media (max-width: 700px) {{
-  .ticker {{ font-size: 4rem; }}
-  .price {{ text-align: left; }}
-  .board th, .board td {{ padding: .5rem .55rem; font-size: .88rem; }}
+/* frosted panels */
+.st-key-chart_card, .st-key-side_panel, .st-key-mini_0, .st-key-mini_1, .st-key-mini_2, .st-key-mini_3,
+.st-key-table_card, .st-key-bench_card {{
+  background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.85);
+  border-radius: 22px; padding: 18px 20px; backdrop-filter: blur(18px);
+  box-shadow: 0 1px 2px rgba(23,23,28,.04), 0 12px 32px -18px rgba(60,60,100,.25);
 }}
+.st-key-side_panel {{ padding: 14px; }}
+.st-key-mini_0, .st-key-mini_1, .st-key-mini_2, .st-key-mini_3 {{ background: rgba(255,255,255,.92); padding: 16px 18px 8px; }}
+
+/* top bar */
+.brand {{ display: flex; align-items: center; gap: .55rem; font-weight: 600; font-size: 1.2rem; color: {INK};
+         letter-spacing: -.01em; }}
+.brand .ring {{ width: 20px; height: 20px; border-radius: 50%; border: 3.5px solid {MINT}; }}
+
+/* segmented controls (nav, timeframe, model toggle) */
+[data-testid="stButtonGroup"] {{ gap: 4px; }}
+[data-testid="stButtonGroup"] button {{
+  border: none !important; background: transparent !important; color: {INK} !important;
+  border-radius: 999px !important; padding: .32rem .9rem !important;
+  min-height: 0 !important; box-shadow: none !important; }}
+[data-testid="stButtonGroup"] button p {{ font-size: .86rem !important; }}
+[data-testid="stButtonGroup"] button[aria-checked="true"] {{ background: #fff !important;
+  box-shadow: 0 1px 3px rgba(23,23,28,.10) !important; }}
+[data-testid="stButtonGroup"] button[aria-checked="true"] p {{ font-weight: 500; }}
+.st-key-nav button[aria-checked="true"] {{
+  background: #fff !important; box-shadow: 0 1px 3px rgba(23,23,28,.08) !important; }}
+.st-key-nav button[aria-checked="true"] p {{ font-weight: 500; }}
+.st-key-nav [role="radiogroup"] {{ justify-content: center; }}
+.st-key-tf [role="radiogroup"] {{ justify-content: flex-end; }}
+.st-key-tf [data-testid="stButtonGroup"] button {{ background: #EFEFF5 !important; padding: .2rem .7rem !important; }}
+.st-key-tf [data-testid="stButtonGroup"] button p {{ font-size: .78rem !important; color: {MUTED}; }}
+.st-key-tf button[aria-checked="true"] {{ background: {INK} !important; }}
+.st-key-tf button[aria-checked="true"] p {{ color: #fff !important; }}
+.st-key-model_toggle [data-testid="stButtonGroup"], .st-key-model_toggle [role="radiogroup"] {{ width: 100% !important; }}
+.st-key-model_toggle button {{ flex: 1 1 0 !important; max-width: none !important; width: auto !important; }}
+.st-key-model_toggle button * {{ max-width: none !important; overflow: visible !important;
+  text-overflow: clip !important; white-space: nowrap !important; }}
+.st-key-model_toggle [data-testid="stElementContainer"], .st-key-model_toggle [data-testid="stButtonGroup"] > div {{
+  width: 100% !important; max-width: none !important; }}
+.st-key-model_toggle [role="radiogroup"] {{ background: #EFEFF5; border-radius: 999px; padding: 3px;
+  display: flex; width: 100%; flex-wrap: nowrap; gap: 2px; }}
+.st-key-model_toggle [data-testid="stButtonGroup"] button {{ flex: 1 1 0; }}
+.st-key-model_toggle button[aria-checked="true"] {{ background: {INK} !important; }}
+.st-key-model_toggle button[aria-checked="true"] p {{ color: #fff !important; font-weight: 500; }}
+
+/* ticker picker */
+.st-key-picker .react-aria-ComboBox [role="group"] {{ border-radius: 999px; background: rgba(255,255,255,.85);
+  border: 1px solid #fff; min-height: 40px; }}
+
+/* chart header */
+.ch-head {{ display: flex; align-items: center; gap: .6rem; color: {INK}; font-size: 1.05rem; font-weight: 500; }}
+.ch-icon {{ width: 28px; height: 28px; border-radius: 50%; background: {INK}; color: #fff; display: grid;
+           place-items: center; font-size: .8rem; font-weight: 600; }}
+.ch-price {{ display: flex; align-items: center; gap: .8rem; margin-top: .35rem; }}
+.big {{ font-size: 3.1rem; font-weight: 400; letter-spacing: -.035em; color: {INK}; line-height: 1;
+       font-variant-numeric: tabular-nums; }}
+.pill {{ display: inline-flex; align-items: center; gap: .25rem; font-size: .76rem; font-weight: 500;
+        padding: .22rem .6rem; border-radius: 999px; font-variant-numeric: tabular-nums; white-space: nowrap; }}
+.pill.up {{ background: {MINT_SOFT}; color: #1E9C78; }}
+.pill.down {{ background: {CORAL_SOFT}; color: {CORAL}; }}
+.pill.flat {{ background: #EFEFF5; color: {MUTED}; }}
+.legend {{ display: flex; gap: 1.1rem; color: {MUTED}; font-size: .8rem; flex-wrap: wrap; }}
+.legend i {{ display: inline-block; width: 16px; height: 2px; vertical-align: middle; margin-right: .4rem; }}
+.legend b {{ display: inline-block; width: 7px; height: 12px; border-radius: 2px; vertical-align: middle;
+            margin-right: 2px; }}
+
+/* side panel cards */
+.card {{ background: #fff; border-radius: 16px; padding: 14px 16px; margin-bottom: .35rem; }}
+.card .lbl {{ display: flex; justify-content: space-between; align-items: center; gap: .5rem; color: {MUTED};
+             font-size: .82rem; }}
+.card .num {{ font-size: 2rem; font-weight: 400; letter-spacing: -.03em; color: {INK}; margin: .2rem 0 .55rem;
+             font-variant-numeric: tabular-nums; line-height: 1.1; }}
+.chips {{ display: flex; gap: 6px; flex-wrap: wrap; }}
+.chip {{ background: #F3F3F7; color: #4A4C57; font-size: .74rem; padding: .22rem .6rem; border-radius: 999px;
+        font-variant-numeric: tabular-nums; }}
+.chip.dark {{ background: {INK}; color: #fff; }}
+.track {{ position: relative; height: 12px; background: #F0F0F5; border-radius: 999px; margin: .3rem 0 .35rem; }}
+.track .fill {{ position: absolute; top: 0; bottom: 0; left: 0; background: {INK}; border-radius: 999px; }}
+.track .knob {{ position: absolute; top: -3px; width: 18px; height: 18px; border-radius: 50%; background: #fff;
+               border: 4px solid {INK}; transform: translateX(-50%); box-sizing: border-box; }}
+.track .mark {{ position: absolute; top: -4px; bottom: -4px; width: 2px; background: {CORAL}; }}
+.ticks {{ display: flex; justify-content: space-between; color: {MUTED}; font-size: .72rem; }}
+.kv {{ display: grid; grid-template-columns: 1fr auto; row-gap: .5rem; font-size: .84rem; padding: .2rem .3rem .5rem; }}
+.kv span:nth-child(odd) {{ color: {MUTED}; }}
+.kv span:nth-child(even) {{ color: {INK}; text-align: right; font-variant-numeric: tabular-nums; }}
+
+.st-key-side_panel [data-testid="stDownloadButton"] button {{
+  width: 100%; background: {INK}; border: none; border-radius: 999px; min-height: 44px; }}
+.st-key-side_panel [data-testid="stDownloadButton"] button p {{ color: #fff; font-weight: 500; }}
+.st-key-side_panel [data-testid="stDownloadButton"] button:hover {{ background: #2B2B33; }}
+
+/* mini cards */
+.mini-head {{ display: flex; justify-content: space-between; align-items: center; gap: .4rem;
+             font-size: .86rem; color: {INK}; }}
+.mini-head .t {{ display: flex; align-items: center; gap: .5rem; white-space: nowrap; }}
+.mini-head .dot {{ width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+                  color: #fff; font-size: .62rem; font-weight: 600; }}
+.mini-num {{ font-size: 1.9rem; font-weight: 400; letter-spacing: -.03em; color: {INK}; margin-top: .55rem;
+            font-variant-numeric: tabular-nums; }}
+
+.verdict {{ font-size: .95rem; color: {INK}; line-height: 1.5; max-width: 70ch; }}
+:focus-visible {{ outline: 2px solid {VIOLET} !important; outline-offset: 2px; }}
+@media (max-width: 900px) {{ .big {{ font-size: 2.3rem; }} }}
 </style>
 """, unsafe_allow_html=True)
 
 
+# ---------------------------------------------------------------- data
 @st.cache_data
 def load():
     preds = pd.read_parquet(RES / "predictions.parquet")
     preds["date"] = pd.to_datetime(preds["date"])
     mets = pd.read_csv(RES / "metrics_by_ticker.csv")
-    return preds, mets
+    ohlc = pd.read_csv(DATA, parse_dates=["date"])
+    return preds, mets, ohlc
 
 
 @st.cache_data
@@ -104,158 +173,235 @@ if not (RES / "predictions.parquet").exists():
     st.error("Prediction file not found. Run `python part2_analysis/run_part2.py` first, then reload this page.")
     st.stop()
 
-preds, mets = load()
+preds, mets, ohlc = load()
 tickers = sorted(preds["name"].unique())
 
-# ---------------------------------------------------------------- sidebar
-with st.sidebar:
-    st.markdown("### Choose a company")
-    ticker = st.selectbox("Ticker", tickers, index=tickers.index("AAPL") if "AAPL" in tickers else 0,
-                          help="Type to search all 505 S&P 500 companies")
-    models = st.multiselect("Models on the chart", list(MODEL_COLS), default=list(MODEL_COLS))
-    period = st.radio("Dates", ["Test period (last 20%)", "Full history"])
-    show_ind = st.multiselect("Moving averages", ["SMA_20", "EMA_20"], default=[])
-    st.markdown(
-        "<p class='side-note'>Each model was trained on the first 80% of a company's dates "
-        "and tested on the last 20%. The simple guess assumes tomorrow's price equals today's.</p>",
-        unsafe_allow_html=True)
 
-# ---------------------------------------------------------------- data for ticker
-full = preds[preds["name"] == ticker].sort_values("date").copy()
-full["next_date"] = full["date"].shift(-1)
-full = full.dropna(subset=["next_date"])
-d = full[full["split"] == "test"] if period.startswith("Test") else full
-m = mets[mets["name"] == ticker].set_index("model")
+def pill(value, text=None):
+    cls = "flat" if abs(value) < 1e-9 else ("up" if value > 0 else "down")
+    arrow = "▲" if value > 0 else ("▼" if value < 0 else "")
+    return f"<span class='pill {cls}'>{arrow} {text if text is not None else f'{abs(value):.2f}%'}</span>"
 
-last = full.iloc[-1]
-first_test = full[full["split"] == "test"].iloc[0]
-chg = last["target_close"] / first_test["close"] - 1
 
-# ---------------------------------------------------------------- hero
-st.markdown(f"""
-<div class="hero">
-  <div>
-    <div class="ticker" role="heading" aria-level="1">{ticker}</div>
-    <div class="hero-sub">Next-day closing price, predicted vs actual</div>
-  </div>
-  <div class="price">
-    <div class="v">${last['target_close']:,.2f}</div>
-    <div class="d" style="color:{UP if chg >= 0 else DOWN}">{'+' if chg >= 0 else '−'}{abs(chg) * 100:.1f}% over the test period</div>
-    <div class="l">Last close, {last['next_date']:%b %d, %Y}</div>
-  </div>
-</div>
+def sparkline(y, color):
+    y = pd.Series(y).dropna().reset_index(drop=True)
+    f = go.Figure(go.Scatter(y=y.values, mode="lines", line=dict(color=color, width=2, shape="spline")))
+    f.add_trace(go.Scatter(x=[len(y) - 1], y=[y.iloc[-1]], mode="markers",
+                           marker=dict(size=8, color="#fff", line=dict(color=color, width=2))))
+    f.update_layout(height=64, margin=dict(l=0, r=6, t=4, b=4), showlegend=False,
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    xaxis=dict(visible=False), yaxis=dict(visible=False))
+    return f
+
+
+# ---------------------------------------------------------------- top bar
+c1, c2, c3 = st.columns([1.2, 2.6, 1.2], vertical_alignment="center")
+with c1:
+    st.markdown("<div class='brand'><span class='ring'></span>Backtest</div>", unsafe_allow_html=True)
+with c2:
+    with st.container(key="nav"):
+        view = st.segmented_control("View", ["Predictions", "All companies", "Speed tests"],
+                                    default="Predictions", label_visibility="collapsed") or "Predictions"
+with c3:
+    with st.container(key="picker"):
+        ticker = st.selectbox("Company", tickers, index=tickers.index("AAPL") if "AAPL" in tickers else 0,
+                              label_visibility="collapsed", help="Type to search all 505 companies")
+
+# ================================================================ PREDICTIONS VIEW
+if view == "Predictions":
+    full = preds[preds["name"] == ticker].sort_values("date").copy()
+    full["next_date"] = full["date"].shift(-1)
+    full = full.dropna(subset=["next_date"])
+    px = ohlc[ohlc["name"] == ticker].set_index("date")
+    m = mets[mets["name"] == ticker].set_index("model")
+    test = full[full["split"] == "test"]
+
+    left, right = st.columns([2.55, 1], gap="medium")
+
+    # ---------------- right panel (built first so the chart can use the chosen model)
+    with right:
+        with st.container(key="side_panel"):
+            with st.container(key="model_toggle"):
+                model = st.segmented_control("Model", list(MODEL_COLS), default="Linear Regression",
+                                             format_func=lambda x: "Linear" if x.startswith("Linear") else x,
+                                             label_visibility="collapsed") or "Linear Regression"
+            r, nv = m.loc[model], m.loc[NAIVE]
+            col = MODEL_COLS[model]
+            last = test.iloc[-1]
+            off = last[col] - last["target_close"]
+            beats = r["mae"] < nv["mae"] - 0.005
+            verdict_pill = ("<span class='pill up'>Beats simple guess</span>" if beats
+                            else "<span class='pill down'>Below simple guess</span>")
+
+            st.markdown(f"""
+<div class="card"><div class="lbl">Last prediction<span>{last['next_date']:%b %d, %Y}</span></div>
+  <div class="num">${last[col]:,.2f}</div>
+  <div class="chips"><span class="chip">Actual ${last['target_close']:,.2f}</span>
+  <span class="chip">Off by ${abs(off):,.2f}</span></div></div>
+""", unsafe_allow_html=True)
+            st.markdown(f"""
+<div class="card"><div class="lbl">Average daily error{verdict_pill}</div>
+  <div class="num">${r['mae']:,.2f}</div>
+  <div class="chips"><span class="chip">RMSE ${r['rmse']:.2f}</span><span class="chip">{r['mape']:.2f}% of price</span>
+  <span class="chip dark">Simple guess ${nv['mae']:.2f}</span></div></div>
+""", unsafe_allow_html=True)
+            acc = float(r["direction_acc"])
+            st.markdown(f"""
+<div class="card"><div class="lbl">Up or down called correctly
+  <span class="pill {'up' if acc > 52 else 'flat'}">{'Better than' if acc > 52 else 'Close to'} a coin flip</span></div>
+  <div class="num">{acc:.1f}%</div>
+  <div class="track"><div class="fill" style="width:{acc}%"></div><div class="mark" style="left:50%"></div>
+  <div class="knob" style="left:{acc}%"></div></div>
+  <div class="ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div></div>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------------- verdict + scoreboard
-order = [NAIVE, "Linear Regression", "Random Forest"]
-rows = [(k, m.loc[k]) for k in order if k in m.index]
-best_model = min((r for r in rows if r[0] != NAIVE), key=lambda r: r[1]["rmse"])
-naive_rmse = m.loc[NAIVE, "rmse"]
-gap = best_model[1]["rmse"] - naive_rmse
-if gap < -0.005:
-    verdict = (f"{best_model[0]} was the most accurate here, off by <b>${best_model[1]['mae']:.2f}</b> on a typical day "
-               f"and <b>${-gap:.2f}</b> better than simply guessing tomorrow = today.")
+            e = test[["next_date", "target_close", "pred_linear", "pred_rf"]].rename(
+                columns={"next_date": "date", "target_close": "actual"})
+            st.download_button("Download predictions", e.to_csv(index=False), f"{ticker}_predictions.csv",
+                               width="stretch")
+            st.markdown(f"""
+<div class="kv">
+  <span>Trained on</span><span>{full['date'].min():%b %Y} to {test['date'].min():%b %Y}</span>
+  <span>Tested on</span><span>{test['date'].min():%b %Y} to {test['next_date'].max():%b %Y}</span>
+  <span>Test days</span><span>{len(test):,}</span>
+  <span>Linear Regression error</span><span>${m.loc['Linear Regression', 'mae']:.2f}</span>
+  <span>Random Forest error</span><span>${m.loc['Random Forest', 'mae']:.2f}</span>
+  <span>Simple guess error</span><span>${nv['mae']:.2f}</span>
+</div>""", unsafe_allow_html=True)
+
+    # ---------------- chart card
+    with left:
+        with st.container(key="chart_card"):
+            h1, h2 = st.columns([1.4, 1], vertical_alignment="top")
+            with h2:
+                with st.container(key="tf"):
+                    tf = st.segmented_control("Range", ["1M", "3M", "6M", "Test", "All"], default="3M",
+                                              label_visibility="collapsed") or "3M"
+            days = {"1M": 21, "3M": 63, "6M": 126}
+            d = full.tail(days[tf]) if tf in days else (test if tf == "Test" else full)
+            d = d.merge(px[["open", "high", "low", "close"]].add_prefix("px_"),
+                        left_on="next_date", right_index=True, how="left")
+            first_c, last_c = d["px_close"].iloc[0], d["px_close"].iloc[-1]
+            chg = (last_c / first_c - 1) * 100
+            with h1:
+                st.markdown(f"""
+<div class="ch-head"><span class="ch-icon">{ticker[0]}</span>{ticker}
+<span style="color:{MUTED};font-weight:400">S&amp;P 500</span></div>
+<div class="ch-price"><span class="big">{last_c:,.2f}</span>{pill(chg)}</div>
+""", unsafe_allow_html=True)
+
+            fig = go.Figure()
+            fig.add_trace(go.Candlestick(
+                x=d["next_date"], open=d["px_open"], high=d["px_high"], low=d["px_low"], close=d["px_close"],
+                name="Actual", increasing=dict(line=dict(color=MINT, width=1), fillcolor=MINT),
+                decreasing=dict(line=dict(color=BUTTER, width=1), fillcolor=BUTTER), whiskerwidth=0))
+            fig.add_trace(go.Scatter(x=d["next_date"], y=d[col], name="Predicted", mode="lines",
+                                     line=dict(color=MODEL_LINE[model], width=1.6),
+                                     hovertemplate="$%{y:,.2f}"))
+            if tf == "All":
+                sd = test["date"].min()
+                fig.add_vrect(x0=sd, x1=d["next_date"].max(), fillcolor=VIOLET, opacity=0.07, line_width=0)
+                fig.add_annotation(x=sd, y=1, yref="paper", text=" Testing starts", showarrow=False,
+                                   xanchor="left", font=dict(color=VIOLET, size=11))
+            fig.add_hline(y=last_c, line=dict(color=INK, width=1, dash="dash"))
+            fig.add_annotation(x=1, xref="paper", y=last_c, text=f" {last_c:,.2f} ", showarrow=False,
+                               xanchor="left", bgcolor=INK, font=dict(color="#fff", size=10), borderpad=3)
+            fig.update_layout(
+                height=430, margin=dict(l=52, r=58, t=8, b=24), showlegend=False,
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family=FONT, color=MUTED, size=11), hovermode="x unified",
+                hoverlabel=dict(bgcolor="#fff", bordercolor=HAIR, font=dict(family=FONT, color=INK)),
+                xaxis=dict(rangeslider=dict(visible=False), showgrid=False, showline=False,
+                           showspikes=True, spikemode="across", spikedash="dot", spikecolor=MUTED,
+                           spikethickness=1),
+                yaxis=dict(showgrid=False, zeroline=False, tickprefix="$"))
+            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.markdown(f"""
+<div class="legend"><span><b style="background:{MINT}"></b><b style="background:{BUTTER}"></b>
+ Actual price (up day, down day)</span>
+<span><i style="background:{MODEL_LINE[model]}"></i>{model} prediction</span></div>
+""", unsafe_allow_html=True)
+
+        # ---------------- indicator cards
+        cur = full.iloc[-1]
+        vol = px["volume"]
+        rsi = cur["RSI_14"]
+        rsi_pill = ("<span class='pill down'>Overbought</span>" if rsi > 70 else
+                    "<span class='pill up'>Oversold</span>" if rsi < 30 else "<span class='pill flat'>Neutral</span>")
+        macd_diff = cur["MACD"] - cur["MACD_signal"]
+        sma_gap = (cur["close"] / cur["SMA_20"] - 1) * 100
+        vol_gap = (vol.iloc[-1] / vol.tail(20).mean() - 1) * 100
+        tail = full.tail(60)
+        cards = [
+            ("RSI 14", "R", VIOLET, f"{rsi:.1f}", rsi_pill, tail["RSI_14"], VIOLET),
+            ("MACD", "M", INK, f"{cur['MACD']:+.2f}",
+             f"<span class='pill {'up' if macd_diff > 0 else 'down'}'>"
+             f"{'Bullish' if macd_diff > 0 else 'Bearish'}</span>",
+             tail["MACD"], MINT if macd_diff > 0 else CORAL),
+            ("SMA 20", "S", MINT, f"${cur['SMA_20']:,.2f}",
+             pill(sma_gap, f"{abs(sma_gap):.1f}% {'below' if sma_gap > 0 else 'above'} price"),
+             tail["SMA_20"], MINT),
+            ("Volume", "V", BUTTER, f"{vol.iloc[-1] / 1e6:,.1f}M",
+             pill(vol_gap, f"{abs(vol_gap):.0f}% vs avg"), vol.tail(60), BUTTER),
+        ]
+        mc = st.columns(4, gap="small")
+        for i, (name, letter, dot, val, badge, series, line) in enumerate(cards):
+            with mc[i]:
+                with st.container(key=f"mini_{i}"):
+                    st.markdown(f"""
+<div class="mini-head"><span class="t"><span class="dot" style="background:{dot}">{letter}</span>{name}</span>
+{badge}</div><div class="mini-num">{val}</div>""", unsafe_allow_html=True)
+                    st.plotly_chart(sparkline(series, line), width="stretch",
+                                    config={"staticPlot": True}, key=f"spark_{i}")
+
+# ================================================================ ALL COMPANIES VIEW
+elif view == "All companies":
+    with st.container(key="table_card"):
+        avg = mets.groupby("model")[["rmse", "mae", "mape", "direction_acc"]].mean()
+        st.markdown("<div class='ch-head'>Average over all 505 companies, test period</div>",
+                    unsafe_allow_html=True)
+        cols = st.columns(3)
+        for c, (k, lab) in zip(cols, [(NAIVE, "Simple guess"), ("Linear Regression", "Linear Regression"),
+                                      ("Random Forest", "Random Forest")]):
+            a = avg.loc[k]
+            dacc = ("" if pd.isna(a["direction_acc"])
+                    else f"<span class='chip'>Up/down {a['direction_acc']:.1f}%</span>")
+            c.markdown(f"""<div class="card"><div class="lbl">{lab}</div><div class="num">${a['mae']:.2f}</div>
+<div class="chips"><span class="chip">RMSE ${a['rmse']:.2f}</span><span class="chip">{a['mape']:.2f}% of price</span>
+{dacc}</div></div>""", unsafe_allow_html=True)
+        st.markdown("<p class='verdict'>The big number is the average daily error in dollars. Both models follow "
+                    "prices closely, but on average neither beats simply guessing that tomorrow's price equals "
+                    "today's.</p>", unsafe_allow_html=True)
+        with st.container(key="tf2"):
+            pick = st.segmented_control("Rank companies by error for", list(MODEL_COLS),
+                                        default="Linear Regression") or "Linear Regression"
+        rank = (mets[mets["model"] == pick].sort_values("mape")[["name", "rmse", "mae", "mape", "direction_acc"]]
+                .rename(columns={"name": "Ticker", "rmse": "RMSE ($)", "mae": "Avg. error ($)",
+                                 "mape": "Error %", "direction_acc": "Up/down correct %"}).round(3))
+        st.dataframe(rank, width="stretch", hide_index=True, height=460)
+
+# ================================================================ SPEED TESTS VIEW
 else:
-    verdict = (f"Neither model beat the simple guess for {ticker}. The best one, {best_model[0]}, "
-               f"was off by <b>${best_model[1]['mae']:.2f}</b> on a typical day; guessing tomorrow = today "
-               f"was off by <b>${m.loc[NAIVE, 'mae']:.2f}</b>.")
-st.markdown(f"<p class='verdict'>{verdict}</p>", unsafe_allow_html=True)
-
-swatch = {NAIVE: MUTED, "Linear Regression": LR, "Random Forest": RF}
-label = {NAIVE: "Simple guess (tomorrow = today)"}
-lowest = min(rows, key=lambda r: r[1]["rmse"])[0]
-body = ""
-for k, r in rows:
-    dir_txt = "—" if pd.isna(r["direction_acc"]) else f"{r['direction_acc']:.1f}%"
-    badge = "<span class='badge'>Lowest error</span>" if k == lowest else ""
-    body += (f"<tr class='{'best' if k == lowest else ''}'>"
-             f"<td><span class='swatch' style='background:{swatch[k]}'></span>{label.get(k, k)}{badge}</td>"
-             f"<td class='num'>${r['rmse']:.2f}</td><td class='num'>${r['mae']:.2f}</td>"
-             f"<td class='num'>{r['mape']:.2f}%</td><td class='num'>{dir_txt}</td></tr>")
-st.markdown(f"""
-<table class="board">
-<thead><tr><th>Model</th><th class="num">RMSE</th><th class="num">Avg. error (MAE)</th>
-<th class="num">Error %</th><th class="num">Up/down correct</th></tr></thead>
-<tbody>{body}</tbody></table>
-""", unsafe_allow_html=True)
-
-# ---------------------------------------------------------------- main chart
-FONT = dict(family="IBM Plex Sans, sans-serif", color=INK, size=12)
-fig = make_subplots(rows=3, cols=1, shared_xaxes=True, row_heights=[0.62, 0.19, 0.19], vertical_spacing=0.05,
-                    subplot_titles=("Closing price", "RSI (14 days)", "MACD"))
-fig.add_trace(go.Scatter(x=d["next_date"], y=d["target_close"], name="Actual",
-                         line=dict(color=INK, width=2.2)), 1, 1)
-for model in models:
-    fig.add_trace(go.Scatter(x=d["next_date"], y=d[MODEL_COLS[model]], name=model,
-                             line=dict(color=MODEL_COLORS[model], width=1.4)), 1, 1)
-for ind, dash in zip(show_ind, ["dot", "dash"]):
-    fig.add_trace(go.Scatter(x=d["date"], y=d[ind], name=ind.replace("_", " "),
-                             line=dict(color=MUTED, width=1, dash=dash)), 1, 1)
-if period == "Full history":
-    split_date = first_test["date"]
-    fig.add_vrect(x0=split_date, x1=d["next_date"].max(), fillcolor=LR, opacity=0.05, line_width=0, row=1, col=1)
-    fig.add_annotation(x=split_date, y=1, yref="y domain", text="  Testing starts", showarrow=False,
-                       xanchor="left", font=dict(color=LR, size=11), row=1, col=1)
-fig.add_hrect(y0=30, y1=70, fillcolor=LINE, opacity=0.35, line_width=0, row=2, col=1)
-fig.add_trace(go.Scatter(x=d["date"], y=d["RSI_14"], name="RSI", line=dict(color=INK, width=1.2),
-                         showlegend=False), 2, 1)
-hist = d["MACD"] - d["MACD_signal"]
-fig.add_trace(go.Bar(x=d["date"], y=hist, name="MACD − signal", showlegend=False,
-                     marker_color=np.where(hist >= 0, UP, DOWN), opacity=0.55), 3, 1)
-fig.add_trace(go.Scatter(x=d["date"], y=d["MACD"], name="MACD", line=dict(color=INK, width=1.1),
-                         showlegend=False), 3, 1)
-fig.add_trace(go.Scatter(x=d["date"], y=d["MACD_signal"], name="Signal", line=dict(color=RF, width=1.1),
-                         showlegend=False), 3, 1)
-fig.update_layout(height=760, hovermode="x unified", font=FONT, plot_bgcolor=PAPER, paper_bgcolor=PAPER,
-                  legend=dict(orientation="h", y=1.0, yanchor="bottom", x=1, xanchor="right", font=dict(size=12)),
-                  margin=dict(t=40, b=30, l=60, r=20), bargap=0)
-fig.update_xaxes(showgrid=False, linecolor=LINE, ticks="outside", tickcolor=LINE)
-fig.update_yaxes(gridcolor="#EDF0F4", zeroline=False, linecolor=LINE)
-fig.update_yaxes(tickprefix="$", row=1, col=1)
-fig.update_yaxes(range=[0, 100], tickvals=[30, 70], row=2, col=1)
-for a in fig.layout.annotations:
-    if a.text in ("Closing price", "RSI (14 days)", "MACD"):
-        a.update(x=0, xanchor="left", font=dict(size=13, color=MUTED))
-st.plotly_chart(fig, width="stretch", config={"displaylogo": False})
-
-# ---------------------------------------------------------------- tabs
-tab1, tab2, tab3 = st.tabs(["Daily errors", "All companies", "Speed tests (Part 1 & 2)"])
-with tab1:
-    e = d[["next_date", "target_close", "pred_linear", "pred_rf"]].rename(
-        columns={"next_date": "Date", "target_close": "Actual", "pred_linear": "Linear Regression",
-                 "pred_rf": "Random Forest"})
-    ef = go.Figure()
-    for model in MODEL_COLS:
-        ef.add_trace(go.Histogram(x=e[model] - e["Actual"], name=model, opacity=0.6,
-                                  marker_color=MODEL_COLORS[model], nbinsx=50))
-    ef.add_vline(x=0, line_color=INK, line_width=1)
-    ef.update_layout(barmode="overlay", height=320, font=FONT, plot_bgcolor=PAPER, paper_bgcolor=PAPER,
-                     title=dict(text="How far off each prediction was (predicted − actual, $)",
-                                font=dict(size=14)), margin=dict(t=50, b=30, l=50, r=20),
-                     legend=dict(orientation="h", y=1.12, x=1, xanchor="right"))
-    ef.update_yaxes(title="Days", gridcolor="#EDF0F4")
-    st.plotly_chart(ef, width="stretch", config={"displaylogo": False})
-    show = e.tail(30).iloc[::-1].copy()
-    show["Date"] = show["Date"].dt.date
-    st.dataframe(show.round(2), width="stretch", hide_index=True)
-    st.download_button("Download predictions as CSV", e.to_csv(index=False), f"{ticker}_predictions.csv")
-with tab2:
-    st.markdown("**Average over all 505 companies (test period)**")
-    avg = mets.groupby("model")[["rmse", "mae", "mape", "direction_acc"]].mean().reindex(order).round(3)
-    avg.index = [label.get(i, i) for i in avg.index]
-    st.dataframe(avg.rename(columns={"rmse": "RMSE ($)", "mae": "MAE ($)", "mape": "Error %",
-                                     "direction_acc": "Up/down correct %"}), width="stretch")
-    pick = st.selectbox("Rank companies by error % for", list(MODEL_COLS))
-    rank = (mets[mets["model"] == pick].sort_values("mape")[["name", "rmse", "mae", "mape", "direction_acc"]]
-            .rename(columns={"name": "Ticker", "rmse": "RMSE ($)", "mae": "MAE ($)", "mape": "Error %",
-                             "direction_acc": "Up/down correct %"}).round(3))
-    st.dataframe(rank, width="stretch", hide_index=True, height=400)
-with tab3:
     b1 = load_optional("part1_storage_benchmark.csv")
     b2 = load_optional("part2_pandas_vs_polars.csv")
-    if b1 is not None:
-        st.markdown("**CSV vs Parquet at 1x, 10x and 100x**")
-        st.dataframe(b1, width="stretch", hide_index=True)
-    if b2 is not None:
-        st.markdown("**Pandas vs Polars, seconds per step**")
-        st.dataframe(b2, width="stretch", hide_index=True)
+    with st.container(key="bench_card"):
+        if b1 is not None:
+            st.markdown("<div class='ch-head'>CSV vs Parquet</div>", unsafe_allow_html=True)
+            scale = st.segmented_control("Data size", ["1x", "10x", "100x"], default="100x") or "100x"
+            s = b1[b1["scale"] == scale]
+            bf = go.Figure(go.Bar(
+                x=s["format"], y=s["read_full_s"], marker=dict(
+                    color=[MINT if f.startswith("parquet") else BUTTER for f in s["format"]],
+                    cornerradius=8),
+                text=[f"{v:.2f}s" for v in s["read_full_s"]], textposition="outside"))
+            bf.update_layout(height=300, margin=dict(l=10, r=10, t=40, b=30), paper_bgcolor="rgba(0,0,0,0)",
+                             plot_bgcolor="rgba(0,0,0,0)", font=dict(family=FONT, color=MUTED),
+                             title=dict(text="Time to read the whole file (seconds)",
+                                        font=dict(size=13, color=INK)),
+                             yaxis=dict(showgrid=False, visible=False))
+            st.plotly_chart(bf, width="stretch", config={"displayModeBar": False})
+            st.dataframe(s, width="stretch", hide_index=True)
+        if b2 is not None:
+            st.markdown("<div class='ch-head' style='margin-top:1rem'>Pandas vs Polars, seconds per step</div>",
+                        unsafe_allow_html=True)
+            st.dataframe(b2.round(3), width="stretch", hide_index=True)
