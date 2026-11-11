@@ -180,6 +180,7 @@ To check my work, I compared the indicator values from both libraries. They were
 
 - I used only price and volume. I did not use news, company earnings or economic data.
 - I did not tune the model settings, and I used one fixed 80/20 split instead of rolling (walk-forward) testing.
+- My Pandas vs Polars test covers every step up to the model, including preparing each company's data for training. The training itself is done by scikit-learn, which receives the same NumPy arrays from either library, so training time is the same no matter which library prepared the data. This is why I compared the two libraries on the data preparation steps.
 
 ---
 
