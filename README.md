@@ -11,6 +11,8 @@ In this assignment I worked with daily stock prices for 505 S&P 500 companies fr
 2. **Part 2:** I compared Pandas and Polars for data analysis, added technical indicators, and trained two models to predict the next day's closing price.
 3. **Part 3:** I built a Streamlit dashboard where you can search any company and see its predictions.
 
+![Dashboard preview](screenshots/1_predictions.png)
+
 ## Folder structure
 
 ```
@@ -21,6 +23,7 @@ In this assignment I worked with daily stock prices for 505 S&P 500 companies fr
 │   └── run_part2.py                   # Part 2: speed test + prediction models
 ├── part3_dashboard/app.py             # Part 3: Streamlit dashboard
 ├── results/                           # all result tables and predictions
+├── screenshots/                       # dashboard screenshots used in this README
 └── requirements.txt                   # Python libraries needed
 ```
 
@@ -213,6 +216,20 @@ I chose **Streamlit** because it was the fastest to build, it has a built-in sea
 - I used `@st.cache_data` so the data loads only once, not every time the user clicks [13].
 - I showed the simple guess next to the models so users can see honestly how good the models are.
 - I used a light, clean style with rounded cards, the Geist font, and only a few colours (mint, yellow, violet and black) so the numbers are easy to read.
+
+### Screenshots
+
+**1. Predictions page (AAPL, last 3 months, Linear Regression)**
+![Predictions page](screenshots/1_predictions.png)
+
+**2. Searching another ticker (MSFT), full history, Random Forest.** The shaded area is the 20% test period.
+![Search a ticker](screenshots/2_search_ticker_full_history.png)
+
+**3. All companies page: average results and a ranking of all 505 companies**
+![All companies](screenshots/3_all_companies.png)
+
+**4. Speed tests page: Part 1 and Part 2 results**
+![Speed tests](screenshots/4_speed_tests.png)
 
 ### Testing
 
